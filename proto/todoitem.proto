@@ -7,9 +7,10 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 service ToDoActions {
     rpc GetItems(Nothing) returns (ToDoList) {}
-    rpc AddItem(ToDoItem) returns (Nothing) {}
+    rpc AddItem(ToDoItem) returns (ToDoItem) {}
     rpc GetItem(ID)       returns (ToDoItem) {}
     rpc DeleteItem(ID)    returns (Nothing) {}
+    rpc UpdateItem(UpdatedItem) returns (Nothing) {}
 }
 
 message ToDoItem {
@@ -20,7 +21,7 @@ message ToDoItem {
 }
 
 message ID {
-    int32 Id = 1;
+    uint32 Id = 1;
 }
 
 message Nothing {
@@ -28,6 +29,11 @@ message Nothing {
 
 message ToDoList {
     repeated ToDoItem ToDoList = 1;
+}
+
+message UpdatedItem {
+    ToDoItem UpdateTodo = 1;
+    ID updateID = 2;
 }
 
 // protoc -I . -I $GOPATH/src proto/todoitem.proto --go_out=plugins=grpc:.

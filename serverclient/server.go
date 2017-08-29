@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/reflection"
 	"golang.org/x/net/context"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -30,30 +31,43 @@ func (s *server) GetItems(context context.Context, in *pb.Nothing) (*pb.ToDoList
 	return &pb.ToDoList{ToDoList: list}, nil
 }
 
-func ( s *server) AddItem(context context.Context, item *pb.ToDoItem) (*pb.Nothing,error) {
+func ( s *server) AddItem(context context.Context, item *pb.ToDoItem) (*pb.ToDoItem,error) {
 	if item.Name == "" {
-		return &pb.Nothing{}, nil
+		return &pb.ToDoItem{}, nil
 	}
 	s.db.Create(&item)
-	return &pb.Nothing{}, nil
+	return item, nil
 }
 
 func ( s *server) DeleteItem(context context.Context, id *pb.ID) (*pb.Nothing, error) {
-	if s.db.Delete(&pb.ToDoItem{}, "id = ?", id).RecordNotFound() {
-		return &pb.Nothing{}, nil
+	if s.db.Delete(&pb.ToDoItem{}, "id = ?", id.Id).RecordNotFound() {
+		return &pb.Nothing{}, errors.New("Could not find item")
 	}
 	return &pb.Nothing{}, nil
 }
 
+
 func ( s *server) GetItem(context context.Context, id *pb.ID) (*pb.ToDoItem, error) {
 	todo := pb.ToDoItem{}
-	if s.db.Where("id = ?", id).First(&todo).RecordNotFound() {
-		return &pb.ToDoItem{}, nil
+	if s.db.Where("id = ?", id.Id).First(&todo).RecordNotFound() {
+		return &pb.ToDoItem{}, errors.New("Item not found")
 	}
+	return &todo, nil
+}
 
-	// pb.ToDoItem{Name:todo.Name, Description:todo.Description, Id:todo.ID}
-
-	return &pb.ToDoItem{}, nil
+func ( s *server) UpdateItem(context context.Context, item *pb.UpdatedItem) (*pb.Nothing, error) {
+	todo := pb.ToDoItem{}
+	if s.db.Where("id = ?", item.UpdateID.Id).First(&todo).RecordNotFound() {
+		return &pb.Nothing{}, errors.New("Item not found")
+	} else {
+		todo = *item.UpdateTodo
+		todo.Id = item.UpdateID.Id
+		err := s.db.Save(todo)
+		if err != nil {
+			return &pb.Nothing{}, errors.New("Could not update item")
+		}
+	}
+	return &pb.Nothing{}, nil
 }
 
 func main() {
@@ -62,6 +76,7 @@ func main() {
 		panic("Can't connect to database: ")
 	}
 	database.AutoMigrate(&pb.ToDoItem{})
+	// database.DropTable(&pb.ToDoItem{})
 	defer database.Close()
 
 	server := NewToDoServer(database)

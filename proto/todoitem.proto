@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package todolist;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+
+service ToDoActions {
+    rpc GetItems(Nothing) returns (ToDoList) {}
+    rpc AddItem(ToDoItem) returns (Nothing) {}
+    rpc GetItem(ID)       returns (ToDoItem) {}
+    rpc DeleteItem(ID)    returns (Nothing) {}
+}
+
+message ToDoItem {
+    uint32 Id = 1 [(gogoproto.moretags) = "gorm:\"primary_key\""];
+    string Name = 2;
+    string Description = 3;
+    bool IsDone = 4;
+}
+
+message ID {
+    int32 Id = 1;
+}
+
+message Nothing {
+}
+
+message ToDoList {
+    repeated ToDoItem ToDoList = 1;
+}
+
+// protoc -I . -I $GOPATH/src proto/todoitem.proto --go_out=plugins=grpc:.
